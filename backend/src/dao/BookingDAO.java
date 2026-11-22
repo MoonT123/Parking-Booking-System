@@ -181,6 +181,37 @@ public class BookingDAO {
         }
     }
 
+    // Check overlapping bookings
+    public boolean hasOverlappingBooking(
+            int lotId,
+            String bayNumber,
+            java.sql.Timestamp startTime,
+            java.sql.Timestamp endTime,
+            int excludeBookingId) throws SQLException {
+
+        String sql = "SELECT COUNT(*) FROM BOOKING "
+                + "WHERE lot_id = ? "
+                + "AND bay_number = ? "
+                + "AND BookingID <> ? "
+                + "AND BookingStatus NOT IN ('CANCELLED', 'EXPIRED') "
+                + "AND StartTime < ? "
+                + "AND EndTime > ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, lotId);
+            ps.setString(2, bayNumber);
+            ps.setInt(3, excludeBookingId);
+            ps.setTimestamp(4, endTime);
+            ps.setTimestamp(5, startTime);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
     // Convert ResultSet into Booking object
     private Booking mapResultSetToBooking(ResultSet rs)
             throws SQLException {

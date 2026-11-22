@@ -1,7 +1,7 @@
-
 package service;
 
 import dao.BookingDAO;
+import dao.ParkingBayDAO;
 import model.Booking;
 
 import java.math.BigDecimal;
@@ -9,19 +9,19 @@ import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class BookingService {
 
     private final BookingDAO bookingDAO;
+    private final ParkingBayDAO parkingBayDAO;
 
     public BookingService() {
         this.bookingDAO = new BookingDAO();
+        this.parkingBayDAO = new ParkingBayDAO();
     }
 
     // 1. VALIDATE BOOKING
-
     private void validateBooking(Booking booking)
             throws IllegalArgumentException {
 
@@ -101,6 +101,7 @@ public class BookingService {
         return hours.multiply(hourlyRate)
                 .setScale(2, RoundingMode.HALF_UP);
     }
+
     // 3. CHECK BOOKING AVAILABILITY
     public boolean checkAvailability(Booking booking)
             throws SQLException {
@@ -115,8 +116,8 @@ public class BookingService {
                 booking.getBookingID()
         );
     }
-    // 4. CREATE BOOKING
 
+    // 4. CREATE BOOKING (Syncs PARKINGBAY status to RESERVED)
     public boolean createBooking(
             Booking booking,
             BigDecimal hourlyRate) throws SQLException {
@@ -138,14 +139,24 @@ public class BookingService {
         booking.setTotalAmount(amount);
         booking.setBookingStatus("PENDING");
 
-        return bookingDAO.insertBooking(booking);
+        boolean created = bookingDAO.insertBooking(booking);
+        if (created) {
+            parkingBayDAO.updateBayStatus(
+                    booking.getLotId(),
+                    booking.getBayNumber(),
+                    "RESERVED"
+            );
+        }
+        return created;
     }
+
     // 5. GET ALL BOOKINGS
     public List<Booking> getAllBookings()
             throws SQLException {
 
         return bookingDAO.getAllBookings();
     }
+
     // 6. GET BOOKING BY ID
     public Booking getBookingById(int bookingID)
             throws SQLException {
@@ -169,8 +180,8 @@ public class BookingService {
 
         return bookingDAO.getBookingsByUserId(userID);
     }
-    // 8. GET BOOKINGS BY STATUS
 
+    // 8. GET BOOKINGS BY STATUS
     public List<Booking> getBookingsByStatus(String status)
             throws SQLException {
 
@@ -178,6 +189,7 @@ public class BookingService {
 
         return bookingDAO.getBookingsByStatus(status);
     }
+
     // 9. UPDATE BOOKING
     public boolean updateBooking(
             Booking booking,
@@ -218,12 +230,13 @@ public class BookingService {
                 hourlyRate
         ));
         if (booking.getBookingStatus() == null
-        || booking.getBookingStatus().trim().isEmpty()) {
-    booking.setBookingStatus(existing.getBookingStatus());
-}
+                || booking.getBookingStatus().trim().isEmpty()) {
+            booking.setBookingStatus(existing.getBookingStatus());
+        }
         return bookingDAO.updateBooking(booking);
     }
-    // 10. CANCEL BOOKING
+
+    // 10. CANCEL BOOKING (Restores PARKINGBAY status to AVAILABLE)
     public boolean cancelBooking(int bookingID)
             throws SQLException {
 
@@ -244,8 +257,16 @@ public class BookingService {
                     "This booking cannot be cancelled.");
         }
 
-        return bookingDAO.updateBookingStatus(
+        boolean cancelled = bookingDAO.updateBookingStatus(
                 bookingID, "CANCELLED");
+        if (cancelled) {
+            parkingBayDAO.updateBayStatus(
+                    booking.getLotId(),
+                    booking.getBayNumber(),
+                    "AVAILABLE"
+            );
+        }
+        return cancelled;
     }
 
     // 11. UPDATE BOOKING STATUS
@@ -263,6 +284,7 @@ public class BookingService {
         return bookingDAO.updateBookingStatus(
                 bookingID, status);
     }
+
     // 12. VALIDATE STATUS
     private void validateStatus(String status) {
 

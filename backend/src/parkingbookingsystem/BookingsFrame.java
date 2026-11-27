@@ -2,7 +2,6 @@ package parkingbookingsystem;
 
 import dao.BookingDAO;
 import java.sql.Timestamp;
-import java.math.BigDecimal;
 import service.BookingService;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -219,7 +218,6 @@ private void createNewBooking() {
     JTextField bayField = new JTextField();
     JTextField startField = new JTextField();
     JTextField endField = new JTextField();
-    JTextField rateField = new JTextField();
 
     JPanel form = new JPanel(
             new java.awt.GridLayout(0, 2, 10, 10));
@@ -242,8 +240,6 @@ private void createNewBooking() {
     form.add(new JLabel("End Time (yyyy-MM-dd HH:mm:ss):"));
     form.add(endField);
 
-    form.add(new JLabel("Hourly Rate:"));
-    form.add(rateField);
 
     int result = JOptionPane.showConfirmDialog(
             this,
@@ -278,19 +274,7 @@ private void createNewBooking() {
         booking.setEndTime(
                 Timestamp.valueOf(endField.getText().trim()));
 
-        BigDecimal hourlyRate = new BigDecimal(
-                rateField.getText().trim());
-
-        if (booking.getUserID() <= 0
-                || booking.getVehicleID() <= 0
-                || booking.getLotId() <= 0
-                || hourlyRate.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException(
-                    "IDs must be positive and hourly rate cannot be negative.");
-        }
-
-        boolean success = bookingService.createBooking(
-                booking, hourlyRate);
+        boolean success = bookingService.createBooking(booking);
 
         if (success) {
             JOptionPane.showMessageDialog(
@@ -336,7 +320,8 @@ private void updateSelectedBooking() {
         String status = booking.getBookingStatus();
 
         if ("CANCELLED".equalsIgnoreCase(status)
-                || "COMPLETED".equalsIgnoreCase(status)) {
+                || "COMPLETED".equalsIgnoreCase(status)
+                || "EXPIRED".equalsIgnoreCase(status)) {
             JOptionPane.showMessageDialog(
                     this, "This booking cannot be updated.");
             return;
@@ -354,7 +339,6 @@ private void updateSelectedBooking() {
                 booking.getStartTime().toString());
         JTextField endField = new JTextField(
                 booking.getEndTime().toString());
-        JTextField rateField = new JTextField();
 
         JPanel form = new JPanel(
                 new java.awt.GridLayout(0, 2, 10, 10));
@@ -371,8 +355,6 @@ private void updateSelectedBooking() {
         form.add(startField);
         form.add(new JLabel("End Time (yyyy-MM-dd HH:mm:ss):"));
         form.add(endField);
-        form.add(new JLabel("Hourly Rate:"));
-        form.add(rateField);
 
         int result = JOptionPane.showConfirmDialog(
                 this, form,
@@ -396,16 +378,7 @@ private void updateSelectedBooking() {
         booking.setEndTime(
                 Timestamp.valueOf(endField.getText().trim()));
 
-        BigDecimal hourlyRate = new BigDecimal(
-                rateField.getText().trim());
-
-        if (hourlyRate.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException(
-                    "Hourly rate cannot be negative.");
-        }
-
-        boolean success = bookingService.updateBooking(
-                booking, hourlyRate);
+        boolean success = bookingService.updateBooking(booking);
 
         if (success) {
             JOptionPane.showMessageDialog(

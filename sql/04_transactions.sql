@@ -17,12 +17,12 @@ WHERE BookingID IN (
     WHERE UserID IN (SELECT UserID FROM USER WHERE Email IN ('tx_owner@parking.local', 'tx_driver@parking.local'))
 );
 
-DELETE FROM BOOKING
-WHERE UserID IN (SELECT UserID FROM USER WHERE Email IN ('tx_owner@parking.local', 'tx_driver@parking.local'));
-
 DELETE FROM PARKINGLOGS
 WHERE VehicleID IN (SELECT VehicleID FROM VEHICLE WHERE LicensePlate IN ('51G-999.99', '51G-888.88'))
    OR lot_id IN (SELECT lot_id FROM PARKINGLOT WHERE LotName = 'TX Demo Lot');
+
+DELETE FROM BOOKING
+WHERE UserID IN (SELECT UserID FROM USER WHERE Email IN ('tx_owner@parking.local', 'tx_driver@parking.local'));
 
 DELETE FROM PARKINGLOT WHERE LotName = 'TX Demo Lot';
 DELETE FROM VEHICLE WHERE LicensePlate IN ('51G-999.99', '51G-888.88');

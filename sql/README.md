@@ -1,40 +1,40 @@
-# HƯỚNG DẪN CÀI ĐẶT VÀ CHẠY CƠ SỞ DỮ LIỆU – PARKING BOOKING SYSTEM
+# Cài đặt cơ sở dữ liệu Parking Booking System
 
-## 1. Yêu cầu môi trường (Prerequisites)
-* **Hệ quản trị CSDL:** MySQL Server **8.0 trở lên** (khuyến nghị bản 8.x để hỗ trợ đầy đủ ràng buộc `CHECK` và `EXPLAIN FORMAT=TRADITIONAL`).
-* **Công cụ quản trị (Client):** DBeaver (khuyến nghị bản 24.x–26.x), MySQL Workbench, hoặc MySQL CLI.
-* **Bảng mã ký tự:** `utf8mb4` / `utf8mb4_unicode_ci`.
+## Tạo database demo mới
 
----
+Dùng MySQL Server 8.4 và chạy các tệp theo thứ tự dưới đây trong MySQL Workbench, DBeaver hoặc MySQL CLI. Dừng khi có lỗi. Tệp `01` xóa toàn bộ database `ParkingBookingSystem` nếu database đó đã tồn tại. Tệp `02` cũng xóa dữ liệu trước khi nạp seed.
 
-## 2. Cấu trúc thư mục & Thứ tự chạy bắt buộc (Execution Order)
-Các script được thiết kế theo trình tự phụ thuộc khóa ngoại. Vui lòng chạy **đúng thứ tự từ 01 đến 05**:
+| Thứ tự | Tệp | Mục đích |
+| --- | --- | --- |
+| 1 | `01_create_database.sql` | Tạo 12 bảng nghiệp vụ gốc |
+| 2 | `02_sample_data.sql` | Nạp dữ liệu mẫu gốc |
+| 3 | `04_transactions.sql` | Chạy ví dụ COMMIT và ROLLBACK trên dữ liệu thử |
+| 4 | `05_indexes.sql` | Tạo chỉ mục tra cứu |
+| 5 | `06_upgrade_dsa.sql` | Nâng schema lên 15 bảng và thêm view quá giờ |
+| 6 | `07_dsa_demo.sql` | Tạo 3 bãi, 60 ô, bản đồ, biểu giá và tình huống demo |
+| 7 | `03_queries.sql` | Chạy các báo cáo, gồm Q04 dựa trên liên kết lượt gửi xe |
 
-1. **`01_create_database.sql`** *(Bắt buộc chạy đầu tiên)*
-   * Xóa database cũ nếu đã tồn tại (`DROP DATABASE IF EXISTS ParkingBookingSystem`), tạo mới database `ParkingBookingSystem` và khởi tạo **12 bảng chuẩn BCNF** (`USER`, `USER_PHONENUMBER`, `VEHICLE`, `PARKINGLOT`, `PARKINGBAY`, `BOOKING`, `PARKINGLOGS`, `PENALTY`, `PAYMENT`, `CANCELLATION`, `TARIFF`, `APPLIESTARIF`) kèm đầy đủ khóa chính, khóa ngoại và ràng buộc toàn vẹn (`CHECK`, `UNIQUE`, `DEFAULT`).
-2. **`02_sample_data.sql`** *(Chạy thứ 2)*
-   * Nạp dữ liệu mẫu cho 12 bảng phục vụ kiểm thử và truy vấn.
-3. **`03_queries.sql`** *(Chạy thứ 3)*
-   * Thực thi các câu truy vấn nghiệp vụ, thống kê doanh thu, công suất bãi đỗ và kiểm tra lịch đặt chỗ.
-4. **`04_transactions.sql`** *(Chạy thứ 4)*
-   * Kiểm thử các thao tác DML (`INSERT`, `UPDATE`, `DELETE`) và 2 giao dịch ACID đa bảng (`COMMIT` đồng bộ `BOOKING` – `PAYMENT` – `PARKINGBAY`, và `ROLLBACK` hoàn tác trên `PARKINGBAY` – `PARKINGLOGS`).
-   * *Lưu ý:* Script sử dụng bộ khóa thử nghiệm riêng (`tx_owner@parking.local`, `tx_driver@parking.local`, biển số `51G-999.99`) và tự động dọn dẹp dữ liệu test cũ ở đầu file nên **không xung đột** với `02_sample_data.sql`.
-5. **`05_indexes.sql`** *(Chạy cuối cùng)*
-   * Khởi tạo **8 Composite/Secondary Index** (`idx_...`) bằng thủ tục an toàn `CreateIndexIfNotExists` và kiểm chứng kế hoạch thực thi qua `EXPLAIN FORMAT=TRADITIONAL`.
+## Nâng cấp database đang có dữ liệu
 
----
+1. Sao lưu database và kiểm tra xem bản sao lưu có thể khôi phục. Tạm dừng các ứng dụng ghi dữ liệu trong lúc nâng cấp.
+2. Chạy câu SELECT đầu tiên trong `06_upgrade_dsa.sql`. Xử lý các booking có chủ booking khác chủ xe theo dữ liệu thực trước khi tiếp tục.
+3. Chạy toàn bộ `06_upgrade_dsa.sql` một lần. MySQL tự commit từng lệnh DDL. Nếu gặp lỗi giữa chừng, kiểm tra các bước đã áp dụng trước khi tiếp tục.
+4. Kiểm tra tài khoản quản lý và phân vai cho nhân viên thực tế. Script nhận diện quản lý từ các chủ bãi hiện có. Các tài khoản khác mặc định là `CUSTOMER`.
+5. Điền tầng, khu vực, khoảng cách và điểm bản đồ theo sơ đồ thực tế. Các ô cũ giữ giá trị NULL cho những trường chưa có dữ liệu. Lượt gửi xe cũ chỉ được liên kết tự động khi đúng một booking phù hợp bao phủ thời điểm vào bãi. Lượt đi thẳng và lượt cần xác minh có thể giữ `BookingID = NULL`.
+6. Gắn biểu giá có hiệu lực cho các bãi sẽ nhận đặt chỗ. Chỉ chạy `07` trên database demo. Script đó tạo tài khoản mô phỏng, dữ liệu đặt chỗ và một biểu giá dự phòng cho các bãi mẫu đã biết.
 
-## 3. Các bước thực thi trên DBeaver
-1. Khởi động **MySQL Server** trên máy cá nhân.
-2. Mở **DBeaver**, kết nối vào máy chủ MySQL cục bộ (`localhost` – đảm bảo hiển thị dấu tích xanh).
-3. Mở lần lượt từng file `.sql` theo đúng thứ tự ở Mục 2 (**File** -> **Open File...**).
-4. Trên thanh công cụ phía trên vùng soạn thảo SQL, kiểm tra kết nối đang chọn **`localhost`**.
-5. Nhấn tổ hợp phím **`Option + X`** (trên macOS) hoặc **`Alt + X`** (trên Windows) để chạy toàn bộ script từ đầu đến cuối.
-6. Kiểm tra tab **Statistics** ở khung kết quả phía dưới: nếu không hiện thông báo lỗi đỏ và toàn bộ các tab kết quả (`Grid`) hiển thị đầy đủ dữ liệu, bước đó đã hoàn tất.
+## Quy tắc dùng trong Java
 
----
+- Booking dùng khoảng nửa mở `[StartTime, EndTime)`. Hai lịch sát giờ được chấp nhận. Hai lịch `PENDING` hoặc `CONFIRMED` giao nhau trên cùng ô bị từ chối.
+- Thêm và sửa booking khóa dòng ô đỗ, kiểm tra lịch rồi ghi trong cùng transaction JDBC. Các chương trình ghi booking khác cần dùng cùng giao thức khóa. File seed nạp các tình huống mẫu bằng SQL trực tiếp.
+- Hủy cập nhật booking và ghi lý do trong cùng transaction. Hủy không tự xử lý hoàn tiền. `bay_status` mô tả trạng thái vận hành. Tra cứu ô cho một khung giờ dùng lịch booking và loại trừ ô bảo trì.
+- Xe phải thuộc người đặt. Ma trận `VEHICLE_BAY_SIZE` định nghĩa độ phù hợp. Xe máy ưu tiên ô nhỏ, ô tô ưu tiên ô vừa, SUV và VAN dùng ô lớn. `ParkingBayDAO.getAvailableBays` có phiên bản lọc theo xe và khung giờ.
+- Giá được tính theo từng đoạn thời gian, kể cả qua nửa đêm. Quy tắc đúng ngày trong tuần ưu tiên hơn `ALL`, tiếp theo là ngày hiệu lực mới nhất và mã biểu giá lớn nhất. Thiếu giá cho bất kỳ đoạn nào sẽ khiến yêu cầu bị từ chối. Dùng `24:00:00` làm mốc kết thúc ngày.
+- Mỗi cạnh bản đồ là một hướng. Lối hai chiều cần hai cạnh. Trình chỉ đường bỏ qua cạnh bị chặn. Dữ liệu demo dùng mét và chi phí di chuyển giữa tầng. Nếu đồ thị có cạnh ngắn hơn khoảng cách hình học, dùng heuristic bằng 0 hoặc một cận dưới phù hợp để giữ tính tối ưu của A*.
+- Khi ghi lượt vào bãi theo booking, truyền `BookingID` vào `ParkingLog`. Khóa ngoại yêu cầu mã xe và bãi trùng với booking. Dữ liệu quyền tài khoản phục vụ tầng đăng nhập và phân quyền của ứng dụng.
 
-## 4. Kiểm chứng tính tái lập (Idempotency) & Xử lý lỗi thường gặp
-* **Chạy lại nhiều lần:** Toàn bộ các file `01_create_database.sql`, `04_transactions.sql` và `05_indexes.sql` đều đã được thiết kế để có thể nhấn **`Option + X` / `Alt + X` chạy lại từ đầu 2+ lần liên tiếp** mà không gặp lỗi trùng bảng, trùng dữ liệu test hay trùng chỉ mục (`SQL Error 1061` / `1553`).
-* **Lỗi `No database selected (Error 1046)`:** Đảm bảo bạn chạy cả dòng `USE ParkingBookingSystem;` ở đầu mỗi file hoặc chọn sẵn `ParkingBookingSystem` trên thanh công cụ DBeaver trước khi chạy lẻ từng câu lệnh.
-* **Lỗi `Cannot drop index: needed in a foreign key constraint (Error 1553)`:** Không tự ý chạy lệnh `DROP INDEX` thủ công trên các cột khóa ngoại; luôn dùng thủ tục kiểm tra có sẵn trong `05_indexes.sql`.
+## Demo và benchmark
+
+- Bãi đầu tiên `DSA Riverside` kín chỗ từ 09:00 đến 10:00 vào ngày sau khi nạp seed. Ô `1-01` có lịch tiếp theo từ 10:00 đến 11:00 và một lịch hủy giao với cả hai.
+- Thử đặt hai yêu cầu giao nhau đồng thời cho cùng ô còn trống. Kết quả mong đợi là một booking thành công. Thử tiếp hai lịch nối nhau, thao tác hủy lặp, ô bảo trì, xe sai chủ, xe quá cỡ và lượt gửi xe có sai mã bãi.
+- Tạo CSV benchmark bằng Python 3. Ví dụ `python sql/generate_benchmark_requests.py requests.csv --count 100000 --seed 42`. Dùng cùng CSV cho baseline và thuật toán tối ưu. Mỗi dòng là một yêu cầu khoảng giờ, có thể trùng với yêu cầu khác để kiểm tra khả năng phát hiện xung đột.

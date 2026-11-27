@@ -5,6 +5,15 @@ import java.sql.Timestamp;
 public class ParkingLog {
 
     private int logId;
+    private Integer bookingID;
+
+    public Integer getBookingID() {
+        return bookingID;
+    }
+
+    public void setBookingID(Integer bookingID) {
+        this.bookingID = bookingID;
+    }
     private Timestamp checkInTime;
     private Timestamp checkOutTime;
     private int lotId;

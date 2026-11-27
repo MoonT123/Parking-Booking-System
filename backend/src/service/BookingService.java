@@ -1,24 +1,17 @@
 package service;
 
 import dao.BookingDAO;
-import dao.ParkingBayDAO;
 import model.Booking;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.Duration;
 import java.util.List;
 
 public class BookingService {
 
     private final BookingDAO bookingDAO;
-    private final ParkingBayDAO parkingBayDAO;
 
     public BookingService() {
         this.bookingDAO = new BookingDAO();
-        this.parkingBayDAO = new ParkingBayDAO();
     }
 
     // 1. VALIDATE BOOKING
@@ -64,44 +57,6 @@ public class BookingService {
         }
     }
 
-    // 2. CALCULATE BOOKING AMOUNT
-    public BigDecimal calculateAmount(
-            Timestamp startTime,
-            Timestamp endTime,
-            BigDecimal hourlyRate) {
-
-        if (startTime == null || endTime == null) {
-            throw new IllegalArgumentException(
-                    "Booking time cannot be null.");
-        }
-
-        if (!endTime.after(startTime)) {
-            throw new IllegalArgumentException(
-                    "Invalid booking time.");
-        }
-
-        if (hourlyRate == null
-                || hourlyRate.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException(
-                    "Invalid hourly rate.");
-        }
-
-        long minutes = Duration.between(
-                startTime.toLocalDateTime(),
-                endTime.toLocalDateTime()
-        ).toMinutes();
-
-        BigDecimal hours = BigDecimal.valueOf(minutes)
-                .divide(
-                        BigDecimal.valueOf(60),
-                        4,
-                        RoundingMode.HALF_UP
-                );
-
-        return hours.multiply(hourlyRate)
-                .setScale(2, RoundingMode.HALF_UP);
-    }
-
     // 3. CHECK BOOKING AVAILABILITY
     public boolean checkAvailability(Booking booking)
             throws SQLException {
@@ -117,37 +72,10 @@ public class BookingService {
         );
     }
 
-    // 4. CREATE BOOKING (Syncs PARKINGBAY status to RESERVED)
-    public boolean createBooking(
-            Booking booking,
-            BigDecimal hourlyRate) throws SQLException {
-
+    public boolean createBooking(Booking booking) throws SQLException {
         validateBooking(booking);
-
-        if (!checkAvailability(booking)) {
-            throw new IllegalArgumentException(
-                    "This parking bay is already booked "
-                    + "during the selected time.");
-        }
-
-        BigDecimal amount = calculateAmount(
-                booking.getStartTime(),
-                booking.getEndTime(),
-                hourlyRate
-        );
-
-        booking.setTotalAmount(amount);
         booking.setBookingStatus("PENDING");
-
-        boolean created = bookingDAO.insertBooking(booking);
-        if (created) {
-            parkingBayDAO.updateBayStatus(
-                    booking.getLotId(),
-                    booking.getBayNumber(),
-                    "RESERVED"
-            );
-        }
-        return created;
+        return bookingDAO.insertBooking(booking);
     }
 
     // 5. GET ALL BOOKINGS
@@ -190,83 +118,19 @@ public class BookingService {
         return bookingDAO.getBookingsByStatus(status);
     }
 
-    // 9. UPDATE BOOKING
-    public boolean updateBooking(
-            Booking booking,
-            BigDecimal hourlyRate) throws SQLException {
-
+    public boolean updateBooking(Booking booking) throws SQLException {
         validateBooking(booking);
-
         if (booking.getBookingID() <= 0) {
-            throw new IllegalArgumentException(
-                    "Invalid Booking ID.");
-        }
-
-        Booking existing = bookingDAO.getBookingById(
-                booking.getBookingID());
-
-        if (existing == null) {
-            throw new IllegalArgumentException(
-                    "Booking does not exist.");
-        }
-
-        if ("CANCELLED".equalsIgnoreCase(
-                existing.getBookingStatus())
-                || "COMPLETED".equalsIgnoreCase(
-                existing.getBookingStatus())) {
-
-            throw new IllegalArgumentException(
-                    "Cannot update a cancelled or completed booking.");
-        }
-
-        if (!checkAvailability(booking)) {
-            throw new IllegalArgumentException(
-                    "Parking bay is not available.");
-        }
-
-        booking.setTotalAmount(calculateAmount(
-                booking.getStartTime(),
-                booking.getEndTime(),
-                hourlyRate
-        ));
-        if (booking.getBookingStatus() == null
-                || booking.getBookingStatus().trim().isEmpty()) {
-            booking.setBookingStatus(existing.getBookingStatus());
+            throw new IllegalArgumentException("Invalid booking ID.");
         }
         return bookingDAO.updateBooking(booking);
     }
 
-    // 10. CANCEL BOOKING (Restores PARKINGBAY status to AVAILABLE)
-    public boolean cancelBooking(int bookingID)
-            throws SQLException {
-
-        Booking booking = bookingDAO.getBookingById(bookingID);
-
-        if (booking == null) {
-            throw new IllegalArgumentException(
-                    "Booking does not exist.");
+    public boolean cancelBooking(int bookingID) throws SQLException {
+        if (bookingID <= 0) {
+            throw new IllegalArgumentException("Invalid booking ID.");
         }
-
-        String status = booking.getBookingStatus();
-
-        if ("CANCELLED".equalsIgnoreCase(status)
-                || "COMPLETED".equalsIgnoreCase(status)
-                || "EXPIRED".equalsIgnoreCase(status)) {
-
-            throw new IllegalArgumentException(
-                    "This booking cannot be cancelled.");
-        }
-
-        boolean cancelled = bookingDAO.updateBookingStatus(
-                bookingID, "CANCELLED");
-        if (cancelled) {
-            parkingBayDAO.updateBayStatus(
-                    booking.getLotId(),
-                    booking.getBayNumber(),
-                    "AVAILABLE"
-            );
-        }
-        return cancelled;
+        return bookingDAO.cancelBooking(bookingID);
     }
 
     // 11. UPDATE BOOKING STATUS
@@ -282,7 +146,7 @@ public class BookingService {
         validateStatus(status);
 
         return bookingDAO.updateBookingStatus(
-                bookingID, status);
+                bookingID, status.toUpperCase(java.util.Locale.ROOT));
     }
 
     // 12. VALIDATE STATUS
@@ -293,7 +157,7 @@ public class BookingService {
                     "Booking status cannot be empty.");
         }
 
-        String value = status.toUpperCase();
+        String value = status.toUpperCase(java.util.Locale.ROOT);
 
         if (!value.equals("PENDING")
                 && !value.equals("CONFIRMED")

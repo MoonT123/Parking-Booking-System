@@ -7,42 +7,6 @@ public class ParkingBay {
     private String bayStatus;
     private String baySize;
     private String bayType;
-    private Integer levelNo;
-    private String zoneCode;
-    private java.math.BigDecimal distanceToExitM;
-    private String mapNodeId;
-
-    public Integer getLevelNo() {
-        return levelNo;
-    }
-
-    public void setLevelNo(Integer levelNo) {
-        this.levelNo = levelNo;
-    }
-
-    public String getZoneCode() {
-        return zoneCode;
-    }
-
-    public void setZoneCode(String zoneCode) {
-        this.zoneCode = zoneCode;
-    }
-
-    public java.math.BigDecimal getDistanceToExitM() {
-        return distanceToExitM;
-    }
-
-    public void setDistanceToExitM(java.math.BigDecimal distanceToExitM) {
-        this.distanceToExitM = distanceToExitM;
-    }
-
-    public String getMapNodeId() {
-        return mapNodeId;
-    }
-
-    public void setMapNodeId(String mapNodeId) {
-        this.mapNodeId = mapNodeId;
-    }
 
     public ParkingBay() {
     }

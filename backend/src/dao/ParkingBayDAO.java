@@ -5,7 +5,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import model.ParkingBay;
@@ -94,47 +93,11 @@ public class ParkingBayDAO {
         return list;
     }
 
-    // Availability for a requested window, ordered by fit and distance.
-    public List<ParkingBay> getAvailableBays(int lotId, int vehicleId, Timestamp start, Timestamp end)
-            throws SQLException {
-        if (start == null || end == null || !end.after(start)) {
-            throw new IllegalArgumentException("End time must be after start time.");
-        }
-        String sql = """
-                SELECT pb.* FROM PARKINGBAY pb
-                JOIN VEHICLE_BAY_SIZE fit ON fit.bay_size = pb.bay_size
-                JOIN VEHICLE v ON v.VehicleSize = fit.vehicle_size AND v.VehicleID = ?
-                WHERE pb.lot_id = ? AND pb.bay_status <> 'MAINTENANCE'
-                  AND NOT EXISTS (
-                    SELECT 1 FROM BOOKING b
-                    WHERE b.lot_id = pb.lot_id AND b.bay_number = pb.bay_number
-                      AND b.BookingStatus IN ('PENDING', 'CONFIRMED')
-                      AND b.StartTime < ? AND b.EndTime > ?
-                  )
-                ORDER BY fit.fit_rank, pb.distance_to_exit_m IS NULL, pb.distance_to_exit_m, pb.bay_number
-                """;
-        List<ParkingBay> bays = new ArrayList<>();
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, vehicleId);
-            ps.setInt(2, lotId);
-            ps.setTimestamp(3, end);
-            ps.setTimestamp(4, start);
-            try (ResultSet rows = ps.executeQuery()) {
-                while (rows.next()) {
-                    bays.add(mapResultSetToParkingBay(rows));
-                }
-            }
-        }
-        return bays;
-    }
-
     // Insert parking bay
     public boolean insertParkingBay(ParkingBay bay) throws SQLException {
         String sql = "INSERT INTO PARKINGBAY "
-                + "(lot_id, bay_number, bay_status, bay_size, bay_type, "
-                + "level_no, zone_code, distance_to_exit_m, map_node_id) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                + "(lot_id, bay_number, bay_status, bay_size, bay_type) "
+                + "VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -144,10 +107,6 @@ public class ParkingBayDAO {
             ps.setString(3, bay.getBayStatus());
             ps.setString(4, bay.getBaySize());
             ps.setString(5, bay.getBayType());
-            ps.setObject(6, bay.getLevelNo(), java.sql.Types.INTEGER);
-            ps.setString(7, bay.getZoneCode());
-            ps.setBigDecimal(8, bay.getDistanceToExitM());
-            ps.setString(9, bay.getMapNodeId());
 
             return ps.executeUpdate() > 0;
         }
@@ -156,8 +115,7 @@ public class ParkingBayDAO {
     // Update parking bay
     public boolean updateParkingBay(ParkingBay bay) throws SQLException {
         String sql = "UPDATE PARKINGBAY SET "
-                + "bay_status = ?, bay_size = ?, bay_type = ?, "
-                + "level_no = ?, zone_code = ?, distance_to_exit_m = ?, map_node_id = ? "
+                + "bay_status = ?, bay_size = ?, bay_type = ? "
                 + "WHERE lot_id = ? AND bay_number = ?";
 
         try (Connection conn = DBConnection.getConnection();
@@ -166,12 +124,8 @@ public class ParkingBayDAO {
             ps.setString(1, bay.getBayStatus());
             ps.setString(2, bay.getBaySize());
             ps.setString(3, bay.getBayType());
-            ps.setObject(4, bay.getLevelNo(), java.sql.Types.INTEGER);
-            ps.setString(5, bay.getZoneCode());
-            ps.setBigDecimal(6, bay.getDistanceToExitM());
-            ps.setString(7, bay.getMapNodeId());
-            ps.setInt(8, bay.getLotId());
-            ps.setString(9, bay.getBayNumber());
+            ps.setInt(4, bay.getLotId());
+            ps.setString(5, bay.getBayNumber());
 
             return ps.executeUpdate() > 0;
         }
@@ -223,10 +177,6 @@ public class ParkingBayDAO {
         bay.setBayStatus(rs.getString("bay_status"));
         bay.setBaySize(rs.getString("bay_size"));
         bay.setBayType(rs.getString("bay_type"));
-        bay.setLevelNo(rs.getObject("level_no", Integer.class));
-        bay.setZoneCode(rs.getString("zone_code"));
-        bay.setDistanceToExitM(rs.getBigDecimal("distance_to_exit_m"));
-        bay.setMapNodeId(rs.getString("map_node_id"));
 
         return bay;
     }

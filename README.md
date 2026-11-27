@@ -6,7 +6,7 @@
 ---
 
 ## 1. Project Overview
-The **Parking Booking System** manages parking bays, vehicles, bookings, payments, visits and penalties. The DSA upgrade adds bay location data, a directed parking map and explicit vehicle-to-bay compatibility.
+The **Parking Booking System** is a desktop management application integrated with a normalized relational database (BCNF, 12 tables) designed to manage parking lots, parking bays, vehicle registrations, customer reservations, payments, barrier check-in/out logs, and overstay penalties.
 
 ### Repository Structure
 ```text
@@ -39,7 +39,7 @@ Parking-Booking-System/
 
 ### Step 1: Initialize the MySQL Database
 1. Open **MySQL Workbench** or **DBeaver** and connect to your MySQL 8.0+ server.
-2. For a fresh demo database, run `01`, `02`, `04`, `05`, `06`, `07`, then `03`. For an existing database, back it up and apply `06` once. See [the SQL guide](sql/README.md).
+2. Execute the scripts in `/sql` strictly in numerical order (`01` $\rightarrow$ `05`). See `sql/README.md` for detailed notes.
 
 ### Step 2: Configure JDBC Connection
 1. Navigate to `backend/src/`.
@@ -59,7 +59,7 @@ Parking-Booking-System/
 
 ## 3. Quality Assurance & Testing Summary
 * **Tester:** Le Hai Dang (`ITITWE24037`)
-* **Previous baseline report:** **33 / 33 PASSED (100%)** before the DSA schema upgrade.
+* **Total Test Cases Executed:** **33 / 33 PASSED (100%)**
   * **Phase 2 (Database Integrity, ACID Transactions, Indexes & Queries):** 27/27 Passed (`TC-01` – `TC-15b`, `TC-Q01` – `TC-Q12`).
   * **Phase 3 (Java Swing UI & MySQL End-to-End Integration):** 6/6 Passed (`TC-16` – `TC-21c`).
 * **Defects & Observations Tracked:** All 3 integration defects/observations (`OBS-03` bay status sync in `BookingService.java`, `OBS-04` main entry point, and `OBS-05` script naming consistency) have been resolved and verified.

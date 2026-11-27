@@ -73,8 +73,8 @@ public class ParkingLogDAO {
     // Insert a new parking log
     public int insertParkingLog(ParkingLog log) throws SQLException {
         String sql = "INSERT INTO PARKINGLOGS "
-                + "(check_in_time, check_out_time, lot_id, UserID, VehicleID, BookingID) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+                + "(check_in_time, check_out_time, lot_id, UserID, VehicleID) "
+                + "VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(
@@ -91,7 +91,6 @@ public class ParkingLogDAO {
             }
 
             ps.setInt(5, log.getVehicleID());
-            ps.setObject(6, log.getBookingID(), java.sql.Types.INTEGER);
 
             ps.executeUpdate();
 
@@ -109,7 +108,7 @@ public class ParkingLogDAO {
     public boolean updateParkingLog(ParkingLog log) throws SQLException {
         String sql = "UPDATE PARKINGLOGS SET "
                 + "check_in_time = ?, check_out_time = ?, "
-                + "lot_id = ?, UserID = ?, VehicleID = ?, BookingID = ? "
+                + "lot_id = ?, UserID = ?, VehicleID = ? "
                 + "WHERE log_id = ?";
 
         try (Connection conn = DBConnection.getConnection();
@@ -126,8 +125,7 @@ public class ParkingLogDAO {
             }
 
             ps.setInt(5, log.getVehicleID());
-            ps.setObject(6, log.getBookingID(), java.sql.Types.INTEGER);
-            ps.setInt(7, log.getLogId());
+            ps.setInt(6, log.getLogId());
 
             return ps.executeUpdate() > 0;
         }
@@ -170,7 +168,6 @@ public class ParkingLogDAO {
         ParkingLog log = new ParkingLog();
 
         log.setLogId(rs.getInt("log_id"));
-        log.setBookingID(rs.getObject("BookingID", Integer.class));
         log.setCheckInTime(rs.getTimestamp("check_in_time"));
         log.setCheckOutTime(rs.getTimestamp("check_out_time"));
         log.setLotId(rs.getInt("lot_id"));

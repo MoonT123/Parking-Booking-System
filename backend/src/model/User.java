@@ -4,17 +4,6 @@ import java.sql.Timestamp;
 
 public class User {
 
-    private String accountRole = "CUSTOMER";
-
-    public String getAccountRole() {
-        return accountRole;
-    }
-
-    public void setAccountRole(String accountRole) {
-        this.accountRole = accountRole;
-    }
-
-
     private int userID;
     private String fullName;
     private String email;

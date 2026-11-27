@@ -2,7 +2,7 @@
 -- PROJECT: PARKING BOOKING SYSTEM (FINAL DATABASE SCHEMA)
 -- FILE: 01_create_database.sql
 -- DESCRIPTION: DDL script creating 12 normalized (BCNF) tables, PKs, FKs,
---              and integrity constraints. Re-running this script deletes the database.
+--              and integrity constraints. Safe to re-run multiple times.
 -- ============================================================================
 
 DROP DATABASE IF EXISTS ParkingBookingSystem;

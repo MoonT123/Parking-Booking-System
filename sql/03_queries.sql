@@ -42,9 +42,19 @@ LEFT JOIN BOOKING b ON b.lot_id=pb.lot_id AND b.bay_number=pb.bay_number
  AND b.EndTime > TIMESTAMP(@report_date,MAKETIME(h.hr,0,0))
 WHERE pb.lot_id=@lot_id GROUP BY h.hr ORDER BY h.hr;
 
--- Q04 Late exits from explicitly linked parking visits (requires 06_upgrade_dsa.sql).
-SELECT LicensePlate, BookingID, EndTime, check_out_time, minutes_late, recorded_penalty_amount
-FROM v_parking_overstay
+-- Q04 Late exits matched to a booking by same vehicle, lot and overlapping visit.
+-- Logical schema has NO PARKINGLOGS.BookingID FK. Multiple plausible bookings
+-- can match one log; confirm the matching business rule with database owner.
+SELECT v.LicensePlate,b.BookingID,b.EndTime,l.check_out_time,
+ TIMESTAMPDIFF(MINUTE,b.EndTime,l.check_out_time) AS minutes_late,
+ COALESCE(SUM(p.penalty_amount),0) AS recorded_penalty_amount
+FROM PARKINGLOGS l JOIN VEHICLE v ON v.VehicleID=l.VehicleID
+JOIN BOOKING b ON b.VehicleID=l.VehicleID AND b.lot_id=l.lot_id
+ AND b.StartTime <= l.check_out_time
+ AND (l.check_in_time IS NULL OR b.EndTime >= l.check_in_time)
+LEFT JOIN PENALTY p ON p.log_id=l.log_id
+WHERE l.check_out_time>b.EndTime
+GROUP BY v.LicensePlate,b.BookingID,b.EndTime,l.check_out_time
 ORDER BY minutes_late DESC;
 
 -- Q05 Lots where each electric bay had a booking starting last calendar week
@@ -59,7 +69,7 @@ AND NOT EXISTS (
  AND b.StartTime >= CURRENT_DATE - INTERVAL (WEEKDAY(CURRENT_DATE)+7) DAY
  AND b.StartTime < CURRENT_DATE - INTERVAL WEEKDAY(CURRENT_DATE) DAY));
 
--- Q06 Users with no bookings (LEFT OUTER JOIN).
+-- Q06 Users with no bookings (LEFT OUTER JOIN). USER has no Role column.
 SELECT u.UserID,u.FullName,u.Email FROM `USER` u
 LEFT JOIN BOOKING b ON b.UserID=u.UserID
 WHERE b.BookingID IS NULL ORDER BY u.UserID;
